@@ -42,9 +42,13 @@
 
 ## 安装
 
-本插件是本地 bundle，`private: true`，不发布到 npm。
+从 npm 安装：
 
-在 DSH 中通过 **Plugins → Add plugin** 选择本目录，或由智能体执行 `plugin_manager` 的 `install_bundle`（target 为本目录绝对路径）。
+```sh
+npm install @tick47/dsh-prompt-optimizer
+```
+
+再通过智能体执行 `plugin_manager` 的 `install_bundle`（target 为 `@tick47/dsh-prompt-optimizer`），或在 **Plugins → Add plugin** 中选择包目录。从代码仓库安装时，把 `install_bundle` 的 target 指向仓库目录即可。
 
 安装后无需重启，客户端模块会热加载；若界面未更新，刷新页面即可。
 

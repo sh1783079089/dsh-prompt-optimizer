@@ -6,7 +6,7 @@
  * finally offers the rewritten prompt for copying or insertion.
  */
 window.__ModuleLoader__.load({
-  id: '@local/prompt-optimizer',
+  id: '@tick47/dsh-prompt-optimizer',
   factory(require) {
     const React = require('react')
     const h = React.createElement
@@ -1205,7 +1205,7 @@ window.__ModuleLoader__.load({
           const sessionRemote = settingsCtx.remote.session
           settingsCtx.slots.inject('plugins.bundle.config', () => settingsCtx.slots.register({
             name: 'plugins.bundle.config',
-            key: '@local/prompt-optimizer',
+            key: '@tick47/dsh-prompt-optimizer',
           }, () => h(ModelSettings, { form, settingsDocument, sessionRemote })))
         })
       },

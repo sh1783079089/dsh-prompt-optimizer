@@ -1,11 +1,19 @@
 {
-  "name": "@local/prompt-optimizer",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@tick47/dsh-prompt-optimizer",
+  "version": "0.2.0",
+  "private": false,
   "description": "Adds an Optimize button beside the message box: rewrites the draft prompt with the configured model, asks for missing details first, and feeds it a compressed digest of the current conversation.",
   "type": "module",
   "license": "BSD-3-Clause",
   "author": "tick47",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sh1783079089/dsh-prompt-optimizer.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "keywords": [
     "dsh",
     "dsh-bundle",

@@ -41,7 +41,13 @@ Turning off **Use this conversation as context** selects the full-prompt format.
 
 ## Installation
 
-Install the plugin as a local DSH bundle. Open **Plugins → Add plugin** and select this directory. You can also run `plugin_manager` with the `install_bundle` action and the absolute path to this directory as its target.
+Install the plugin as a DSH bundle from npm:
+
+```sh
+npm install @tick47/dsh-prompt-optimizer
+```
+
+Then add it to the profile with the `plugin_manager` tool (`install_bundle`, target `@tick47/dsh-prompt-optimizer`), or pick the package directory with **Plugins → Add plugin**. To install from a checkout instead, point `install_bundle` at the repository directory.
 
 DSH loads the client module on installation. If the composer button is missing, refresh the interface.
 

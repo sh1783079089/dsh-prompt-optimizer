@@ -6,7 +6,7 @@
  * and hands that digest to the model, so a prompt written mid-conversation is
  * optimized against the work already done.
  *
- * @module @local/prompt-optimizer
+ * @module @tick47/dsh-prompt-optimizer
  */
 
 /** Route the browser half calls; kept in sync with `client.js`. */
@@ -86,7 +86,7 @@ export const Config = {
   },
   '~standard': {
     version: 1,
-    vendor: '@local/prompt-optimizer',
+    vendor: '@tick47/dsh-prompt-optimizer',
     validate(raw) {
       const value = { ...raw }
       for (const key of Object.keys(modelConfigFields)) {

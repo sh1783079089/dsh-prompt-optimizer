@@ -1,4 +1,4 @@
 - insert:
     - id: prompt-optimizer
-      name: '@local/prompt-optimizer'
+      name: '@tick47/dsh-prompt-optimizer'
       config: {}

@@ -5,15 +5,16 @@ substitute for the task the user gives you.
 
 ## Project
 
-`@local/prompt-optimizer` — a DeepSeek Harness (DSH) bundle plugin that adds an
+`@tick47/dsh-prompt-optimizer` — a DeepSeek Harness (DSH) bundle plugin that adds an
 Optimize button to the composer and rewrites the current draft with the session's
 selected model.
 
 - Repository root **is** the plugin package root; there is one package and no
   monorepo.
 - No build step, no bundler, no runtime dependencies, no test framework.
-- `private: true`. Local installation only; never publish.
-- Git: branch `main`, local only, **no remote**. Do not add one.
+- Published on npm as `@tick47/dsh-prompt-optimizer`; `private` must stay `false`.
+- Git: branch `main`, `origin` is `github.com/sh1783079089/dsh-prompt-optimizer`.
+  Do not add another remote.
 
 ## Layout
 
