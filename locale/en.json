@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Prompt optimizer",
+    "description": "Adds an Optimize button beside the message box that rewrites your draft prompt with the selected model, and asks you for the details it still needs.",
+    "detail": "docs/DETAIL.md"
+  }
+}

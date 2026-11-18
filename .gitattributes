@@ -1,0 +1,9 @@
+# Normalize line endings to LF in the repository and the working tree so the
+# plugin's JS/JSON/SVG sources stay byte-stable across platforms.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.woff2 binary

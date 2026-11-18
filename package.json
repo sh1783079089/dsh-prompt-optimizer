@@ -1,0 +1,45 @@
+{
+  "name": "@local/prompt-optimizer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Adds an Optimize button beside the message box: rewrites the draft prompt with the configured model, asks for missing details first, and feeds it a compressed digest of the current conversation.",
+  "type": "module",
+  "license": "MIT",
+  "author": "tick47",
+  "keywords": [
+    "dsh",
+    "dsh-bundle",
+    "dsh-plugin",
+    "prompt",
+    "prompt-engineering",
+    "prompt-optimizer"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  }
+}
