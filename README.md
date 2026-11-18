@@ -90,4 +90,4 @@ node --check client.js
 
 ## 许可
 
-[MIT](LICENSE)
+[BSD 3-Clause](LICENSE)

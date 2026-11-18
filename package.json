@@ -4,7 +4,7 @@
   "private": true,
   "description": "Adds an Optimize button beside the message box: rewrites the draft prompt with the configured model, asks for missing details first, and feeds it a compressed digest of the current conversation.",
   "type": "module",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "author": "tick47",
   "keywords": [
     "dsh",
