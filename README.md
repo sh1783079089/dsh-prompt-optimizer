@@ -1,93 +1,93 @@
 # Prompt optimizer
 
-一个适用于 DeepSeek Harness（DSH）的提示词优化插件。在消息框旁新增一个按钮，点击后用对话模型或专用模型重写草稿。缺少必要信息时会先向你追问。
+[简体中文](README.zh-CN.md)
 
-插件会读取当前会话并自动压缩成有界摘要，一并交给优化模型，因此在**对话中途**同样可用，而不局限于开场。
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue)](LICENSE)
+[![DeepSeek Harness bundle plugin](https://img.shields.io/badge/DeepSeek_Harness-Bundle_plugin-2563eb)](#installation)
 
-## 功能
+Prompt optimizer is a DeepSeek Harness (DSH) bundle plugin that adds an **Optimize prompt** button to the composer. It rewrites your draft with the conversation model or a dedicated model and asks follow-up questions when important details are missing.
 
-- **消息框旁的按钮**：位于 composer 工具行，点击打开优化弹窗。
-- **优化**：把草稿交给模型重写。
-- **缺少信息时追问**：最多 4 个具体问题；可以只答一部分，也可以「跳过，直接优化」。
-- **结果可编辑**：可直接改，再「插入输入框」（写回 composer）或「复制」。
-- **两种输出形态**：见下文。
-- **会话上下文**：自动读取本会话消息并压缩，供优化模型参考。
+The optimizer can use a compact digest of the current conversation, so it can refine a follow-up in the middle of a session as well as a first message.
 
-## 两种输出形态
+## Features
 
-优化器根据草稿性质选择形态，并在结果标题旁标注：
+- Open the optimizer from the composer and edit your draft in the dialog.
+- Answer up to four follow-up questions, leave some blank, or choose **Skip and optimize**.
+- Edit the rewritten prompt, insert it into the composer, or copy it to the clipboard.
+- Use the current conversation as context and see how much history the optimizer used.
 
-| 形态 | 适用 | 规则 |
+## Output shapes
+
+The optimizer labels the result according to how the draft relates to the conversation.
+
+| Shape | When it is used | What it includes |
 |---|---|---|
-| **完整提示词** | 会话与该任务无关 | 角色、目标、上下文、交付格式、硬约束，自包含 |
-| **增量指令** | 后续、修订、纠正、下一步 | 不重述身份与背景；只写这次改什么；仅在约束必须继续成立、有风险或被强调时重申 |
+| **Full prompt** | A new task | A self-contained objective, relevant context, deliverable, and requirements. |
+| **Delta instruction** | A follow-up, revision, correction, or next step | The requested change and any existing constraints that need to be restated. |
 
-关闭「参考本会话上下文」后没有历史可判，一律产出完整提示词。
+Turning off **Use this conversation as context** selects the full-prompt format.
 
-## 会话上下文与压缩
+## Conversation context
 
-- 通过宿主的 `ctx.sessions.get(sessionId)` 取当前活动会话，再用 `Session.deriveMessages()` 读模型实际看到的消息列表。
-- 只有 human / assistant 轮次进入摘要；system prompt 与 tool result 不进入；工具调用压成 `[tools: name]` 标记。
-- 单条上限 900 字；按近因加权装入预算，放不下的旧内容折叠为 `[… N earlier messages compressed away …]`，让模型知道该段是省略而非空。
-- 压缩是确定性的，不额外调用模型，一次请求仍只有一次模型往返。
+- The host looks up the active session by ID and reads its messages with `Session.deriveMessages()`.
+- The digest includes user and assistant turns. It omits system prompts and tool results, and represents tool calls as `[tools: name]` markers.
+- Each turn is capped at 900 characters. Compression favors recent turns and marks omitted history with `[… N earlier messages compressed away …]`.
+- Compression is deterministic. Each optimization request makes one model call.
 
-## 安装
+## Installation
 
-本插件是本地 bundle，`private: true`，不发布到 npm。
+Install the plugin as a local DSH bundle. Open **Plugins → Add plugin** and select this directory. You can also run `plugin_manager` with the `install_bundle` action and the absolute path to this directory as its target.
 
-在 DSH 中通过 **Plugins → Add plugin** 选择本目录，或由智能体执行 `plugin_manager` 的 `install_bundle`（target 为本目录绝对路径）。
+DSH loads the client module on installation. If the composer button is missing, refresh the interface.
 
-安装后无需重启，客户端模块会热加载；若界面未更新，刷新页面即可。
+## Configuration
 
-## 配置
+Open **Plugins → Prompt optimizer**, choose the model source, and click **Save**.
 
-在 DSH 的 **插件 → 提示词优化** 详情页选择优化时使用的模型，然后点击 **保存**。
+- **Use the conversation model** (default) uses the current session's model selection, then the model from its last request, then the DSH default.
+- **Use a dedicated model** uses the model you select from the DSH catalog for every optimization request. The draft and any enabled conversation context go to that model's provider.
 
-- **使用对话模型**（默认）沿用当前会话的模型选择。新会话没有单独选择时，使用 DSH 的默认模型。
-- **使用优化专用模型** 从 DSH 模型目录选择一个固定模型，应用于所有会话的优化请求。草稿和启用的会话摘要会发给该模型提供方。
+Existing `provider` and `model` overrides continue to select a dedicated model until you change the mode in the plugin settings. The plugin row also accepts these options.
 
-已有的 `provider` 和 `model` 固定配置会沿用为专用模型，直到从插件设置切换模式。插件行配置还支持下列参数。
+| Option | Default | Description |
+|---|---:|---|
+| `timeoutMs` | `90000` | Request timeout in milliseconds. |
+| `maxContextChars` | `6000` | Target digest size in characters. The configured value is capped at `24000`. |
 
-| 字段 | 默认 | 说明 |
-|---|---|---|
-| `timeoutMs` | `90000` | 单次请求端到端超时 |
-| `maxContextChars` | `6000` | 会话摘要字符预算，上限 `24000` |
+## How it works
 
-## 工作原理
+- The host in `index.js` registers `POST /prompt-optimizer/optimize`. It reads the session, builds the digest, and calls the model through `ctx.llm`.
+- The browser code in `client.js` registers the composer button, dialog, and plugin settings through `window.__ModuleLoader__`.
+- The interface uses DSH design tokens for its theme and typography.
 
-- **宿主半部**（`index.js`）注册一个 `POST /prompt-optimizer/optimize` 端点，负责读会话、压缩、调用 `ctx.llm`，并返回 `{ok, stage, prompt|questions, shape, notes, context}`。
-- **浏览器半部**（`client.js`）通过 `window.__ModuleLoader__` 注册 `conversation.input.left`（按钮）、`shell.overlay`（弹窗）和 `plugins.bundle.config`（插件设置）。
-- 界面样式使用宿主的 `--dsw-alias-*`、`--dsw-radius-*`、`--dsw-font-*`、`--dsw-elevation-*` 设计令牌，跟随明暗主题与用户字号。
+## Repository layout
 
-## 目录结构
-
-```
+```text
 .
-├── index.js            # 宿主：优化端点、会话读取与压缩、模型调用
-├── client.js           # 浏览器：按钮、弹窗、样式
-├── cordis.patch.yml    # bundle patch
-├── package.json        # 包元信息与 dsh.client 声明
-├── locale/             # 中英文显示标题与描述
-├── docs/DETAIL.md      # 插件详情页文档
-└── icon.svg            # 插件图标
+├── index.js           # Host endpoint, session digest, and model calls
+├── client.js          # Composer button, dialog, settings, and styles
+├── cordis.patch.yml   # DSH bundle patch
+├── package.json      # Package metadata and client module declaration
+├── locale/           # English and Chinese plugin manager text
+├── docs/DETAIL.md     # Plugin details
+└── icon.svg           # Plugin icon
 ```
 
-## 限制
+## Limits
 
-- 需要一个已选中的模型路由，没有时请求会被拒绝并给出说明。
-- 草稿超过 20,000 字符会被拒绝。
-- 非活动会话（例如未打开过的冷会话）不提供上下文，请求退化为仅用草稿。
-- 弹窗覆盖在对话之上，不新增标签页或侧栏页面。
+- Optimization requires an available model route.
+- Drafts over 20,000 characters are rejected. The model call requests up to 2,000 output tokens.
+- A session that is unavailable to the host contributes no context. The optimizer can still use the draft.
 
-## 开发
+## Development
 
-```bash
-# 语法与逻辑冒烟（仅示例，仓库不含测试脚本）
+```sh
+node --check index.js
 node --check client.js
 ```
 
-对 DSH 端点的改动需要重新安装 bundle 才能被宿主加载：先 `remove_bundle`，再 `install_bundle`。
+Run `remove_bundle` followed by `install_bundle` to reload host changes.
 
-## 许可
+## License
 
 [BSD 3-Clause](LICENSE)
