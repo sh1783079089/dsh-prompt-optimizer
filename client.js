@@ -11,6 +11,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const h = React.createElement
     const ENDPOINT = '/prompt-optimizer/optimize'
+    const SETTINGS_ID = 'prompt-optimizer'
 
     const STRINGS = {
       en: {
@@ -42,11 +43,30 @@ window.__ModuleLoader__.load({
         contextUsed: 'Conversation context: {messages} messages, compressed to {chars} characters',
         contextTruncated: ', earlier parts elided',
         contextEmpty: 'No earlier messages in this session.',
+        settings: {
+          mode: 'Model used for optimization',
+          conversation: 'Use the conversation model',
+          dedicated: 'Use a dedicated model',
+          model: 'Dedicated model',
+          choose: 'Choose a model',
+          loading: 'Loading models…',
+          catalogFailed: 'Could not load the model list.',
+          catalogPartial: 'Some providers could not list their models.',
+          noModels: 'DSH has no models available to select.',
+          retry: 'Reload models',
+          unavailable: 'Unavailable',
+          readOnly: 'These settings are read-only.',
+          save: 'Save',
+          saving: 'Saving…',
+          discard: 'Discard',
+          saveFailed: 'Could not save. Discard your edits to load the current settings, then try again.',
+        },
         errors: {
           EMPTY: 'Write a prompt first.',
           TOO_LONG: 'That prompt is too long.',
           NO_LLM: 'The model service is not running in this profile.',
-          NO_MODEL: 'No model is selected. Pick one in the composer and try again.',
+          NO_MODEL: 'Choose a conversation model in the composer or a dedicated model in the plugin settings.',
+          OPTIMIZER_MODEL_REQUIRED: 'Choose a dedicated model in the Prompt optimizer plugin settings.',
           MODEL: 'The model call failed.',
           UNREADABLE: 'The optimizer returned an unreadable response.',
           NO_QUESTIONS: 'The model asked for details but listed none.',
@@ -82,11 +102,30 @@ window.__ModuleLoader__.load({
         contextUsed: '已附带会话上下文：{messages} 条消息，压缩至 {chars} 字',
         contextTruncated: '，较早部分已省略',
         contextEmpty: '本会话暂无更早的消息。',
+        settings: {
+          mode: '优化时使用的模型',
+          conversation: '使用对话模型',
+          dedicated: '使用优化专用模型',
+          model: '专用模型',
+          choose: '请选择模型',
+          loading: '正在加载模型…',
+          catalogFailed: '无法加载模型列表。',
+          catalogPartial: '部分提供商的模型列表加载失败。',
+          noModels: 'DSH 暂无可选模型。',
+          retry: '重新加载模型',
+          unavailable: '不可用',
+          readOnly: '当前设置为只读。',
+          save: '保存',
+          saving: '保存中…',
+          discard: '放弃修改',
+          saveFailed: '保存失败。请放弃修改以读取当前设置，然后重试。',
+        },
         errors: {
           EMPTY: '请先写一段提示词。',
           TOO_LONG: '提示词太长了。',
           NO_LLM: '当前配置没有运行模型服务。',
-          NO_MODEL: '还没有选择模型，请先在输入框里选一个模型。',
+          NO_MODEL: '请在输入框选择对话模型，或在插件设置中选择专用模型。',
+          OPTIMIZER_MODEL_REQUIRED: '请在「提示词优化」插件设置中选择专用模型。',
           MODEL: '模型调用失败。',
           UNREADABLE: '优化服务返回了无法识别的内容。',
           NO_QUESTIONS: '模型表示需要补充信息，但没有列出问题。',
@@ -144,6 +183,14 @@ window.__ModuleLoader__.load({
       '.dpo-trigger{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-tertiary);cursor:pointer;transition:background-color 120ms ease,color 120ms ease}',
       '.dpo-trigger:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dpo-trigger:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dpo-settings{display:grid;gap:12px;color:var(--dsw-alias-label-primary)}',
+      '.dpo-setting{display:grid;gap:6px;min-width:0}',
+      '.dpo-setting select{min-width:0;width:100%;padding:8px 12px;border:0.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-layer-3);color:inherit;font:inherit}',
+      '.dpo-setting select:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}',
+      '.dpo-settings-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}',
+      '.dpo-settings .dpo-btn{font:inherit}',
+      '.dpo-settings-status{margin:0;color:var(--dsw-alias-label-tertiary)}',
+      '.dpo-settings-error{margin:0;color:var(--dsw-alias-label-error)}',
       '@media (max-width:720px){.dpo-dialog{border-radius:var(--dsw-radius-xl)}.dpo-head{padding:16px 12px 0 18px}.dpo-body{padding:12px 18px 4px}.dpo-foot{padding:12px 18px 16px}}',
       '@media (prefers-reduced-motion:reduce){.dpo-close,.dpo-btn,.dpo-input,.dpo-q,.dpo-trigger{transition:none}}',
     ].join('\n')
@@ -429,6 +476,116 @@ window.__ModuleLoader__.load({
       }
     }
 
+    function routeKey(provider, model) {
+      return provider && model ? JSON.stringify([provider, model]) : ''
+    }
+
+    function ModelSettings({ form, sessionRemote }) {
+      const t = strings().settings
+      const subscribe = React.useCallback(listener => form.subscribe(listener), [form])
+      const getSnapshot = React.useCallback(() => form.getSnapshot(), [form])
+      const snapshot = React.useSyncExternalStore(subscribe, getSnapshot)
+      const [draft, setDraft] = React.useState(null)
+      const [saving, setSaving] = React.useState(false)
+      const [failed, setFailed] = React.useState(false)
+      const [catalog, setCatalog] = React.useState(null)
+      const [attempt, setAttempt] = React.useState(0)
+      const value = snapshot.value
+      const savedRoute = routeKey(value?.provider?.trim(), value?.model?.trim())
+      const savedMode = value?.modelMode || (savedRoute ? 'dedicated' : 'conversation')
+      const mode = draft?.mode ?? savedMode
+      const selected = draft?.selected ?? savedRoute
+      const dedicated = mode === 'dedicated'
+
+      React.useEffect(() => {
+        if (!dedicated) return
+        let active = true
+        setCatalog(null)
+        async function load() {
+          try {
+            const response = await sessionRemote.modelCatalog()
+            if (active) setCatalog(response.ok ? response.value : false)
+          } catch {
+            if (active) setCatalog(false)
+          }
+        }
+        load()
+        return () => { active = false }
+      }, [dedicated, sessionRemote, attempt])
+
+      if (snapshot.status === 'loading') return null
+      const disabled = snapshot.status !== 'ready' || !snapshot.writable || saving
+      const groups = catalog?.groups ?? []
+      const known = groups.some(group => group.models.some(model => routeKey(group.id, model.id) === selected))
+      const changed = mode !== savedMode || (dedicated && selected !== savedRoute)
+
+      function edit(patch) {
+        setDraft({ mode, selected, revision: draft?.revision ?? snapshot.revision, ...patch })
+      }
+
+      function discard() {
+        setDraft(null)
+        setFailed(false)
+      }
+
+      async function save(event) {
+        event.preventDefault()
+        if (disabled || !changed || (dedicated && !known)) return
+        const ops = [{ op: 'set', path: ['modelMode'], value: mode }]
+        if (dedicated) {
+          const [provider, model] = JSON.parse(selected)
+          ops.push(
+            { op: 'set', path: ['provider'], value: provider },
+            { op: 'set', path: ['model'], value: model },
+          )
+        }
+        setSaving(true)
+        setFailed(false)
+        try {
+          if (await form.mutate(ops, draft.revision) === false) setFailed(true)
+          else setDraft(null)
+        } catch {
+          setFailed(true)
+        } finally {
+          setSaving(false)
+        }
+      }
+
+      return h('form', { className: 'dpo-settings', onSubmit: save },
+        h('style', null, CSS),
+        h('label', { className: 'dpo-setting' }, t.mode,
+          h('select', { value: mode, disabled, onChange: event => edit({ mode: event.target.value }) },
+            h('option', { value: 'conversation' }, t.conversation),
+            h('option', { value: 'dedicated' }, t.dedicated),
+          ),
+        ),
+        dedicated && h('label', { className: 'dpo-setting' }, t.model,
+          h('select', { value: selected, disabled: disabled || !catalog, onChange: event => edit({ selected: event.target.value }) },
+            h('option', { value: '', disabled: true }, t.choose),
+            selected && !known && h('option', { value: selected, disabled: true },
+              `${JSON.parse(selected).join(' / ')} (${catalog === null ? t.loading : t.unavailable})`,
+            ),
+            groups.map(group => h('optgroup', { key: group.id, label: group.name ?? group.id },
+              group.models.map(model => h('option', { key: model.id, value: routeKey(group.id, model.id) }, model.name ?? model.id)),
+            )),
+          ),
+        ),
+        dedicated && catalog === null && h('p', { role: 'status', className: 'dpo-settings-status' }, t.loading),
+        dedicated && catalog && !groups.some(group => group.models.length) &&
+          h('p', { role: 'status', className: 'dpo-settings-status' }, t.noModels),
+        dedicated && (catalog === false || catalog?.failures?.length > 0) && h('div', { className: 'dpo-settings' },
+          h('p', { role: 'status', className: 'dpo-settings-status' }, catalog === false ? t.catalogFailed : t.catalogPartial),
+          h('div', null, h('button', { type: 'button', className: 'dpo-btn', onClick: () => setAttempt(attempt + 1) }, t.retry)),
+        ),
+        !snapshot.writable && h('p', { className: 'dpo-settings-status' }, t.readOnly),
+        failed && h('p', { role: 'alert', className: 'dpo-settings-error' }, t.saveFailed),
+        snapshot.writable && h('div', { className: 'dpo-settings-actions' },
+          (draft || failed) && h('button', { type: 'button', className: 'dpo-btn', onClick: discard, disabled: saving }, t.discard),
+          h('button', { type: 'submit', className: 'dpo-btn dpo-primary', disabled: disabled || !changed || (dedicated && !known) }, saving ? t.saving : t.save),
+        ),
+      )
+    }
+
     function OptimizeButton(props) {
       const useInput = props && props.useInput
       const draft = typeof useInput === 'function' ? useInput(selectDraft) : ''
@@ -683,6 +840,15 @@ window.__ModuleLoader__.load({
           order: 60,
           label: 'Prompt optimizer',
         }, OptimizePanel))
+
+        ctx.inject(['configForms', 'remote', 'remote.session'], settingsCtx => {
+          const form = settingsCtx.configForms.get(SETTINGS_ID)
+          const sessionRemote = settingsCtx.remote.session
+          settingsCtx.slots.inject('plugins.bundle.config', () => settingsCtx.slots.register({
+            name: 'plugins.bundle.config',
+            key: '@local/prompt-optimizer',
+          }, () => h(ModelSettings, { form, sessionRemote })))
+        })
       },
     }
   },

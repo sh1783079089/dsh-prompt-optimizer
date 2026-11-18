@@ -1,6 +1,6 @@
 # Prompt optimizer
 
-一个适用于 DeepSeek Harness（DSH）的提示词优化插件。在消息框旁新增一个按钮，点击后用当前模型重写你的提示词；缺少必要信息时先向你追问，而不是凭空猜测。
+一个适用于 DeepSeek Harness（DSH）的提示词优化插件。在消息框旁新增一个按钮，点击后用对话模型或专用模型重写草稿。缺少必要信息时会先向你追问。
 
 插件会读取当前会话并自动压缩成有界摘要，一并交给优化模型，因此在**对话中途**同样可用，而不局限于开场。
 
@@ -41,19 +41,22 @@
 
 ## 配置
 
-在插件行配置中可选项：
+在 DSH 的 **插件 → 提示词优化** 详情页选择优化时使用的模型，然后点击 **保存**。
+
+- **使用对话模型**（默认）沿用当前会话的模型选择。新会话没有单独选择时，使用 DSH 的默认模型。
+- **使用优化专用模型** 从 DSH 模型目录选择一个固定模型，应用于所有会话的优化请求。草稿和启用的会话摘要会发给该模型提供方。
+
+已有的 `provider` 和 `model` 固定配置会沿用为专用模型，直到从插件设置切换模式。插件行配置还支持下列参数。
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
-| `provider` | 跟随 composer 选中模型 | 固定模型提供方，需与 `model` 同时设置 |
-| `model` | 跟随 composer 选中模型 | 固定模型 id |
 | `timeoutMs` | `90000` | 单次请求端到端超时 |
 | `maxContextChars` | `6000` | 会话摘要字符预算，上限 `24000` |
 
 ## 工作原理
 
 - **宿主半部**（`index.js`）注册一个 `POST /prompt-optimizer/optimize` 端点，负责读会话、压缩、调用 `ctx.llm`，并返回 `{ok, stage, prompt|questions, shape, notes, context}`。
-- **浏览器半部**（`client.js`）通过 `window.__ModuleLoader__` 注册两个 slot：`conversation.input.left`（按钮）与 `shell.overlay`（弹窗）。
+- **浏览器半部**（`client.js`）通过 `window.__ModuleLoader__` 注册 `conversation.input.left`（按钮）、`shell.overlay`（弹窗）和 `plugins.bundle.config`（插件设置）。
 - 界面样式使用宿主的 `--dsw-alias-*`、`--dsw-radius-*`、`--dsw-font-*`、`--dsw-elevation-*` 设计令牌，跟随明暗主题与用户字号。
 
 ## 目录结构

@@ -66,9 +66,16 @@ one model round trip.
 
 ## Model use
 
-The plugin calls the model route selected in the composer (the default model
-setting). Set `provider` and `model` in the plugin configuration to pin a
-different route. `timeoutMs` overrides the 90-second deadline.
+Open **Plugins → Prompt optimizer**, choose the model source, and select **Save**.
+
+- **Use the conversation model** (default) follows the current session's model
+  selection. A new session without its own selection uses the DSH default.
+- **Use a dedicated model** sends drafts and any enabled conversation context
+  to the model you pick from DSH's catalog.
+
+Existing `provider` and `model` overrides continue to act as a dedicated model
+until you change the mode in the settings. `timeoutMs` overrides the 90-second
+deadline.
 
 Each optimization is one model call, capped at 2,000 output tokens. Prompts are
 not stored by the plugin: the draft and answers travel from the page to the host

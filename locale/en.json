@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Prompt optimizer",
-    "description": "Adds an Optimize button beside the message box that rewrites your draft prompt with the selected model, and asks you for the details it still needs.",
+    "description": "Adds an Optimize button beside the message box. Rewrite drafts with the conversation model or a dedicated model, with follow-up questions when details are missing.",
     "detail": "docs/DETAIL.md"
   }
 }

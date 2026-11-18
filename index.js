@@ -22,6 +22,52 @@ const MAX_CONTEXT_CHARS = 24_000
 const PER_ENTRY_CHARS = 900
 const HEAD_ENTRY_CHARS = 320
 
+const modelConfigField = {
+  type: 'string',
+  meta: { default: '', volatile: true },
+  toJSON() {
+    return { type: this.type, meta: { ...this.meta } }
+  },
+}
+const modelConfigFields = { modelMode: modelConfigField, provider: modelConfigField, model: modelConfigField }
+const writeVolatile = Symbol.for('cosmokit.volatile.write')
+
+// Cordis validates Config through Standard Schema. DSH reads the serialized
+// Schemastery fields and updates the volatile scalar references on save.
+export const Config = {
+  type: 'object',
+  meta: { default: {} },
+  dict: modelConfigFields,
+  toJSON() {
+    const fields = Object.entries(modelConfigFields)
+    return {
+      uid: 0,
+      refs: {
+        0: { type: 'object', meta: { default: {} }, dict: Object.fromEntries(fields.map(([key], index) => [key, index + 1])) },
+        ...Object.fromEntries(fields.map(([, field], index) => [index + 1, field.toJSON()])),
+      },
+    }
+  },
+  '~standard': {
+    version: 1,
+    vendor: '@local/prompt-optimizer',
+    validate(raw) {
+      const value = { ...raw }
+      for (const key of Object.keys(modelConfigFields)) {
+        let current = value[key] ?? ''
+        if (typeof current !== 'string' || (key === 'modelMode' && !['', 'conversation', 'dedicated'].includes(current))) {
+          return { issues: [{ message: `Invalid ${key}`, path: [key] }] }
+        }
+        value[key] = Object.freeze({
+          get: () => current,
+          [writeVolatile]: (next) => { current = next },
+        })
+      }
+      return { value }
+    },
+  },
+}
+
 /** Hard dependency: without the browser carrier this bundle has no surface. */
 export const inject = ['webServer']
 
@@ -82,14 +128,25 @@ async function handle(ctx, options, body) {
     return { status: 503, payload: { ok: false, code: 'NO_LLM', message: 'The model service is not running in this profile.' } }
   }
 
-  const route = resolveRoute(ctx, options)
+  const provider = configString(options.provider)
+  const model = configString(options.model)
+  const mode = configString(options.modelMode) ?? (provider && model ? 'dedicated' : 'conversation')
+  if (mode === 'dedicated' && (!provider || !model)) {
+    return {
+      status: 409,
+      payload: { ok: false, code: 'OPTIMIZER_MODEL_REQUIRED', message: 'Choose a dedicated model in the Prompt optimizer plugin settings.' },
+    }
+  }
+  const useContext = body?.useContext !== false
+  const session = useContext || mode === 'conversation' ? findSession(ctx, body?.sessionId) : undefined
+  const route = mode === 'dedicated' ? { provider, model } : resolveConversationRoute(ctx, session)
   if (route === undefined) {
     return {
       status: 409,
       payload: {
         ok: false,
         code: 'NO_MODEL',
-        message: 'No model route is selected. Choose a model in the composer, or set provider and model in the plugin config.',
+        message: 'No conversation model is selected. Choose one in the composer or set a dedicated model in the plugin settings.',
       },
     }
   }
@@ -99,9 +156,7 @@ async function handle(ctx, options, body) {
   const language = resolveLanguage(body?.locale, body?.target)
   const timeoutMs = positiveInteger(options.timeoutMs, DEFAULT_TIMEOUT_MS)
   const questionMode = answers.length > 0 ? 'answers' : (forced ? 'force' : 'ask')
-  const context = body?.useContext === false
-    ? emptyContext()
-    : readConversationContext(ctx, body?.sessionId, contextBudget(options))
+  const context = useContext ? readConversationContext(session, contextBudget(options)) : emptyContext()
 
   let text
   try {
@@ -129,23 +184,12 @@ async function handle(ctx, options, body) {
  * turns survive, tool results and system prompt text never enter the digest,
  * each entry is capped, and the oldest entries are dropped behind an explicit
  * elision marker once the budget is spent.
- * @param ctx - live host context.
- * @param sessionId - the calling session, as supplied by the browser half.
+ * @param session - the live session, if available.
  * @param budget - maximum digest characters.
  * @returns the digest plus the facts the browser half reports.
  */
-function readConversationContext(ctx, sessionId, budget) {
-  if (typeof sessionId !== 'string' || sessionId.length === 0) return emptyContext()
-  const sessions = ctx.get('sessions')
-  if (sessions === undefined || typeof sessions.get !== 'function') return emptyContext()
-
-  let session
-  try {
-    session = sessions.get(sessionId)
-  } catch {
-    return emptyContext()
-  }
-  if (session === undefined || session === null || typeof session.deriveMessages !== 'function') return emptyContext()
+function readConversationContext(session, budget) {
+  if (typeof session?.deriveMessages !== 'function') return emptyContext()
 
   let messages
   try {
@@ -278,25 +322,45 @@ async function complete(llm, route, system, user, timeoutMs) {
   }
 }
 
-/**
- * Resolve the model route: explicit config first, then the selected composer model.
- * @param ctx - live host context.
- * @param options - resolved plugin configuration.
- * @returns a provider/model pair, or `undefined` when none is available.
- */
-function resolveRoute(ctx, options) {
-  const provider = nonEmpty(options.provider)
-  const model = nonEmpty(options.model)
-  if (provider !== undefined && model !== undefined) return { provider, model }
-  const selection = ctx.get('agentDefaultModel')?.currentSelection?.()
-  if (selection !== undefined && selection !== null) {
-    const selectedProvider = nonEmpty(selection.provider)
-    const selectedModel = nonEmpty(selection.model)
-    if (selectedProvider !== undefined && selectedModel !== undefined) {
-      return { provider: selectedProvider, model: selectedModel }
-    }
+function findSession(ctx, sessionId) {
+  if (typeof sessionId !== 'string' || sessionId.length === 0) return undefined
+  try {
+    return ctx.get('sessions')?.get(sessionId)
+  } catch {
+    return undefined
   }
-  return undefined
+}
+
+/** Match DSH's order: pending composer choice, last request, profile default. */
+function resolveConversationRoute(ctx, session) {
+  if (session) {
+    try {
+      const pending = ctx.get('sessionProjections')?.stateOf(session, 'modelSelection')?.pending
+      const route = modelRoute(pending)
+      if (route) return route
+    } catch { /* the projection may be unavailable in this profile */ }
+    try {
+      const request = session.requestHeader?.()
+      const route = modelRoute(request?.config, request?.adapterDefaults?.reasoningEffort !== true)
+      if (route) return route
+    } catch { /* a session may not have a readable previous request */ }
+  }
+  try {
+    return modelRoute(ctx.get('agentDefaultModel')?.currentSelection?.())
+  } catch {
+    return undefined
+  }
+}
+
+function modelRoute(selection, includeEffort = true) {
+  const provider = nonEmpty(selection?.provider)
+  const model = nonEmpty(selection?.model)
+  const reasoningEffort = includeEffort ? nonEmpty(selection?.reasoningEffort) : undefined
+  if (provider && model) return { provider, model, ...(reasoningEffort ? { reasoningEffort } : {}) }
+}
+
+function configString(value) {
+  return nonEmpty(typeof value?.get === 'function' ? value.get() : value)
 }
 
 /** System instruction; the model answers with exactly one JSON object. */
