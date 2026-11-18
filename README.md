@@ -15,6 +15,7 @@ The optimizer can use a compact digest of the current conversation, so it can re
 - Answer up to four follow-up questions, leave some blank, or choose **Skip and optimize**.
 - Edit the rewritten prompt, insert it into the composer, or copy it to the clipboard.
 - Use the current conversation as context and see how much history the optimizer used.
+- Set the context defaults in the plugin settings, and change them for a single request from the dialog.
 
 ## Output shapes
 
@@ -30,9 +31,13 @@ Turning off **Use this conversation as context** selects the full-prompt format.
 ## Conversation context
 
 - The host looks up the active session by ID and reads its messages with `Session.deriveMessages()`.
-- The digest includes user and assistant turns. It omits system prompts and tool results, and represents tool calls as `[tools: name]` markers.
-- Each turn is capped at 900 characters. Compression favors recent turns and marks omitted history with `[… N earlier messages compressed away …]`.
-- Compression is deterministic. Each optimization request makes one model call.
+- The summary uses visible user and assistant text. It excludes session system prompts, DSH checkpoints, tool calls and results, reasoning, and attachments.
+- The plugin settings choose the default: whether the context toggle starts on, and whether the history is prepared with an AI summary or with local compression. The context icon beside the draft changes either choice for one request without saving it.
+- When there is no cached summary, the configured model summarizes the history with a dedicated system prompt. If summarization fails or times out, local compression supplies the context.
+- A history that already fits `maxContextChars` without truncation is sent as-is, so the summary call only happens when local compression would drop something.
+- Within a session, matching history and model settings reuse the summary for 30 minutes. The host keeps up to 32 successful summaries in memory and shares a single summary call across matching concurrent requests.
+- Preparing an AI summary adds one model call. Requests that use local compression, reuse a summary, or skip conversation context make only the optimization call.
+- The dialog reports which source it used: AI summary, cached AI summary, or local compression.
 
 ## Installation
 
@@ -51,8 +56,10 @@ Existing `provider` and `model` overrides continue to select a dedicated model u
 
 | Option | Default | Description |
 |---|---:|---|
-| `timeoutMs` | `90000` | Request timeout in milliseconds. |
-| `maxContextChars` | `6000` | Target digest size in characters. The configured value is capped at `24000`. |
+| `timeoutMs` | `90000` | Shared timeout in milliseconds for summarization and optimization. |
+| `maxContextChars` | `6000` | Character limit for the summary input and conversation context sent to the optimizer. Capped at `24000`. |
+| `contextDefault` | `on` | Whether a new optimization request starts with the conversation context on or off. |
+| `summaryMode` | `ai` | `ai` summarizes the history with one extra model call; `local` compresses it without one. |
 
 ## How it works
 
@@ -86,7 +93,7 @@ node --check index.js
 node --check client.js
 ```
 
-Run `remove_bundle` followed by `install_bundle` to reload host changes.
+After updating the bundle in place, quit DSH Desktop from the system tray and reopen it to load host changes. The running host can reuse the module cached for the same file path even after reinstalling the bundle.
 
 ## License
 

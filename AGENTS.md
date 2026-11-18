@@ -32,13 +32,16 @@ selected model.
 - **Host half** registers a `POST` route on `ctx.webServer`. It resolves the
   model route from config or `ctx.get('agentDefaultModel').currentSelection()`,
   reads the calling session through `ctx.get('sessions').get(sessionId)` and
-  `Session.deriveMessages()`, compresses that conversation, then calls
-  `ctx.llm.prepareCall(...)` and `call.stream(...)` and assembles the text.
-- **Browser half** loads through `window.__ModuleLoader__.load` and registers two
-  slots: `conversation.input.left` as `prompt-optimizer.trigger`, and
-  `shell.overlay` as `prompt-optimizer.panel`. The trigger captures
-  `inputActions` and `sessionId` from its slot props; the dialog lives in a
-  root-scoped overlay and receives them through the module store.
+  `Session.deriveMessages()`, and reuses or generates an AI summary for the
+  filtered conversation. Both the summary and the optimization use
+  `ctx.llm.prepareCall(...)` and `call.stream(...)`.
+- **Browser half** loads through `window.__ModuleLoader__.load` and registers
+  `conversation.input.left` as `prompt-optimizer.trigger`, `shell.overlay` as
+  `prompt-optimizer.panel`, and the plugin settings panel as
+  `plugins.bundle.config`. The trigger captures `inputActions` and `sessionId`
+  from its slot props; the dialog lives in a root-scoped overlay and receives
+  them through the module store. It reads the dialog defaults from
+  `configForms` on every open, so a saved setting applies to the next request.
 - The two halves talk over plain `fetch` to the host route. There is no Remote,
   no Typert schema, and no `host.call` — a bundle's host half is not a dynamic
   Cordis package, so `host.call` does not reach it.
@@ -58,10 +61,14 @@ selected model.
    `--dsw-font-*`, `--dsw-elevation-*`, `--dsh-content-font-size`. No literal
    colors except through a token; no fixed font size that ignores the user's
    setting.
-5. **Never persist a prompt, an answer, or a conversation digest.** They exist
-   for one request.
-6. **The digest must exclude the system prompt and tool results.** Only human and
-   assistant turns enter; tool calls collapse to a `[tools: name]` marker.
+5. **Keep drafts and answers request-local.** Keep successful conversation
+   summaries only in the host's memory cache for up to 30 minutes and at most
+   32 entries. The cache key hashes the session ID, filtered history, and
+   summary settings. A local-only request, or a history that fits the budget
+   without truncation, writes no cache entry and makes no summary call.
+6. **Conversation context contains only visible user and assistant text.**
+   Exclude session system prompts, DSH compaction checkpoints, tool calls and
+   results, reasoning blocks, and attachments from AI input and local fallback.
 7. **Bounds are part of the contract**: draft ≤ 20,000 chars, context budget
    default 6,000 (cap 24,000), output ≤ 2,000 tokens.
 
@@ -69,10 +76,12 @@ selected model.
 
 `POST /prompt-optimizer/optimize`
 
-Request: `{ draft, answers, force, locale, sessionId, useContext }`.
+Request: `{ draft, answers, force, locale, sessionId, useContext, summaryMode }`,
+where `summaryMode` is `ai` | `local` and defaults to the plugin setting.
 Response: `{ ok, stage, prompt?, questions?, shape?, notes?, context? }`, where
 `stage` is `optimized` or `questions`, `shape` is `fresh` | `continue` | `null`,
-and `context` is `{ available, messages, chars, truncated }`.
+and `context` is `{ available, messages, chars, truncated, summary }` with
+`summary` being `ai` | `cached` | `local` | `null`.
 Errors: `{ ok: false, code, message }` with `400` (empty/too long/body), `409`
 (no model), `413`, `502` (model), `503` (no LLM service), `405` (method).
 
@@ -81,9 +90,9 @@ in the same change.
 
 ## Changing and verifying
 
-- **Host changes** need a reload: `plugin_manager` `remove_bundle` then
-  `install_bundle` with the absolute package directory. Editing `index.js` while
-  the plugin is installed does nothing until then.
+- **Host changes** at the same installed path need a new DSH host process.
+  Quit DSH Desktop from the system tray and reopen it. Reinstalling a bundle
+  at the same path can reuse the old host module cached by the running process.
 - **Client changes** reload with the module graph; if the page still shows the old
   UI, refresh it.
 - There is usually **no browser control**. Verify in this order:

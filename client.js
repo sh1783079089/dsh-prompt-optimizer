@@ -40,15 +40,37 @@ window.__ModuleLoader__.load({
         answerPlaceholder: 'Your answer',
         original: 'Original draft',
         contextLabel: 'Use this conversation as context',
-        contextUsed: 'Conversation context: {messages} messages, compressed to {chars} characters',
+        contextTitle: 'Context for this request',
+        contextOffState: 'Off',
+        contextMode: 'How to prepare this conversation',
+        contextAi: 'AI summary',
+        contextAiHint: 'One extra model call; keeps decisions, constraints and open work.',
+        contextLocal: 'Local compression',
+        contextLocalHint: 'No extra model call; deterministic, recency-weighted.',
+        contextReset: 'Use the defaults',
+        summaryAi: 'AI summary',
+        summaryCached: 'AI summary (cached)',
+        summaryLocal: 'Local compression',
+        contextUsed: '{messages} messages, {chars} characters',
         contextTruncated: ', earlier parts elided',
         contextEmpty: 'No earlier messages in this session.',
         settings: {
           mode: 'Model used for optimization',
           conversation: 'Use the conversation model',
+          conversationHint: 'New conversations use the DSH default until you choose a model.',
           dedicated: 'Use a dedicated model',
+          dedicatedHint: 'Use one model for optimization across all conversations.',
           model: 'Dedicated model',
-          choose: 'Choose a model',
+          contextMode: 'Conversation context',
+          contextOn: 'On by default',
+          contextOnHint: 'The dialog starts with context on; each request can still turn it off.',
+          contextOff: 'Off by default',
+          contextOffHint: 'The dialog starts with context off; each request can still turn it on.',
+          summaryMode: 'How to prepare the context',
+          summaryAi: 'AI summary',
+          summaryAiHint: 'One extra model call; a history that already fits is sent as-is.',
+          summaryLocal: 'Local compression',
+          summaryLocalHint: 'No extra model call; the oldest turns are elided first.',
           loading: 'Loading models…',
           catalogFailed: 'Could not load the model list.',
           catalogPartial: 'Some providers could not list their models.',
@@ -56,6 +78,10 @@ window.__ModuleLoader__.load({
           retry: 'Reload models',
           unavailable: 'Unavailable',
           readOnly: 'These settings are read-only.',
+          settingsLoading: 'Loading plugin settings…',
+          settingsUnavailable: 'DSH has not exposed these plugin settings. If you just updated the bundle, quit DSH from the system tray and reopen it.',
+          settingsReadFailed: 'Could not read the plugin settings from DSH.',
+          reloadSettings: 'Reload settings',
           save: 'Save',
           saving: 'Saving…',
           discard: 'Discard',
@@ -99,15 +125,37 @@ window.__ModuleLoader__.load({
         answerPlaceholder: '你的回答',
         original: '原始草稿',
         contextLabel: '参考本会话上下文',
-        contextUsed: '已附带会话上下文：{messages} 条消息，压缩至 {chars} 字',
+        contextTitle: '本次上下文',
+        contextOffState: '不使用',
+        contextMode: '本次会话上下文的整理方式',
+        contextAi: 'AI 摘要',
+        contextAiHint: '额外调用一次模型；保留决定、约束和待办。',
+        contextLocal: '本地压缩',
+        contextLocalHint: '不额外调用模型；确定性的近因加权压缩。',
+        contextReset: '恢复默认',
+        summaryAi: 'AI 摘要',
+        summaryCached: 'AI 摘要（缓存）',
+        summaryLocal: '本地压缩',
+        contextUsed: '{messages} 条消息，{chars} 字',
         contextTruncated: '，较早部分已省略',
         contextEmpty: '本会话暂无更早的消息。',
         settings: {
           mode: '优化时使用的模型',
           conversation: '使用对话模型',
+          conversationHint: '新对话尚未选定模型时，使用 DSH 默认模型。',
           dedicated: '使用优化专用模型',
+          dedicatedHint: '所有对话的提示词优化都使用同一个模型。',
           model: '专用模型',
-          choose: '请选择模型',
+          contextMode: '会话上下文',
+          contextOn: '默认开启',
+          contextOnHint: '弹窗默认勾选上下文，单次请求仍可关闭。',
+          contextOff: '默认关闭',
+          contextOffHint: '弹窗默认不带上下文，单次请求仍可开启。',
+          summaryMode: '上下文整理方式',
+          summaryAi: 'AI 摘要',
+          summaryAiHint: '额外调用一次模型；历史本就不长时直接原样带上。',
+          summaryLocal: '本地压缩',
+          summaryLocalHint: '不额外调用模型；优先省略较早的轮次。',
           loading: '正在加载模型…',
           catalogFailed: '无法加载模型列表。',
           catalogPartial: '部分提供商的模型列表加载失败。',
@@ -115,6 +163,10 @@ window.__ModuleLoader__.load({
           retry: '重新加载模型',
           unavailable: '不可用',
           readOnly: '当前设置为只读。',
+          settingsLoading: '正在加载插件设置…',
+          settingsUnavailable: 'DSH 宿主暂未提供此插件的配置。如果刚更新 bundle，请从系统托盘退出 DSH，再重新打开。',
+          settingsReadFailed: '无法从 DSH 读取插件设置。',
+          reloadSettings: '重新加载设置',
           save: '保存',
           saving: '保存中…',
           discard: '放弃修改',
@@ -163,12 +215,11 @@ window.__ModuleLoader__.load({
       '.dpo-foot{display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 24px 20px}',
       '.dpo-spacer{flex:1 1 auto}',
       '.dpo-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:0.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-lg);background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:14px;line-height:22px;font-weight:500;cursor:pointer;transition:background-color 120ms ease,border-color 120ms ease}',
-      '.dpo-btn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dpo-btn:hover:enabled{background:var(--dsw-alias-interactive-bg-hover)}',
       '.dpo-btn:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
       '.dpo-btn[disabled]{opacity:.5;cursor:default}',
-      '.dpo-btn[disabled]:hover{background:transparent}',
       '.dpo-primary{border-color:transparent;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-foreground)}',
-      '.dpo-primary:hover:not([disabled]){background:var(--dsw-alias-button-primary-hover)}',
+      '.dpo-primary:hover:enabled{background:var(--dsw-alias-button-primary-hover)}',
       '.dpo-error{padding:8px 12px;border-radius:var(--dsw-radius-md);background:var(--dsw-static-red-400-a12);color:var(--dsw-alias-state-error-primary);font-size:12px;line-height:18px}',
       '.dpo-notice{padding:8px 12px;border-radius:var(--dsw-radius-md);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}',
       '.dpo-notes{margin:0;padding-left:18px;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:20px}',
@@ -177,25 +228,69 @@ window.__ModuleLoader__.load({
       '.dpo-check input{width:14px;height:14px;margin:0;accent-color:var(--dsw-alias-state-business-primary);cursor:pointer}',
       '.dpo-check input:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
       '.dpo-meta{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}',
+      '.dpo-ctxbtn{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;transition:background-color 120ms ease,color 120ms ease}',
+      '.dpo-ctxbtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dpo-ctxbtn[aria-expanded="true"]{background:var(--dsw-alias-interactive-bg-active)}',
+      '.dpo-ctxbtn[data-active="false"]{color:var(--dsw-alias-label-caption)}',
+      '.dpo-ctxbtn:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dpo-panel{display:grid;gap:8px;padding:10px 12px;border:0.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-module-platform)}',
+      '.dpo-panel-title{margin:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;font-weight:500}',
+      '.dpo-choice{display:flex;align-items:flex-start;gap:8px;min-width:0;cursor:pointer;font-size:13px;line-height:20px}',
+      '.dpo-choice input{flex:none;margin:3px 0 0;accent-color:var(--dsw-alias-state-business-primary)}',
+      '.dpo-choice input:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dpo-choice-copy{display:grid;gap:2px;min-width:0}',
+      '.dpo-choice:has(input:disabled){cursor:default;opacity:.55}',
+      '.dpo-choice-title{font-weight:500;color:var(--dsw-alias-label-primary)}',
+      '.dpo-link{appearance:none;justify-self:start;margin:0;padding:0;border:0;background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:12px;line-height:18px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;border-radius:var(--dsw-radius-xs)}',
+      '.dpo-link:hover{color:var(--dsw-alias-label-primary)}',
+      '.dpo-link:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
       '.dpo-labelrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px}',
       '.dpo-labelrow .dpo-label{margin:0}',
       '.dpo-badge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:var(--dsw-radius-xs);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;white-space:nowrap}',
       '.dpo-trigger{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-tertiary);cursor:pointer;transition:background-color 120ms ease,color 120ms ease}',
       '.dpo-trigger:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.dpo-trigger:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
-      '.dpo-settings{display:grid;gap:12px;color:var(--dsw-alias-label-primary)}',
-      '.dpo-setting{display:grid;gap:6px;min-width:0}',
-      '.dpo-setting select{min-width:0;width:100%;padding:8px 12px;border:0.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-layer-3);color:inherit;font:inherit}',
-      '.dpo-setting select:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}',
-      '.dpo-settings-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}',
-      '.dpo-settings .dpo-btn{font:inherit}',
-      '.dpo-settings-status{margin:0;color:var(--dsw-alias-label-tertiary)}',
-      '.dpo-settings-error{margin:0;color:var(--dsw-alias-label-error)}',
+      '.dpo-settings{display:grid;gap:16px;min-width:0;color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family);font-size:var(--dsh-content-font-size,1rem);line-height:1.5}',
+      '.dpo-setting{min-width:0;margin:0;padding:0;border:0}',
+      '.dpo-setting legend{padding:0;margin:0 0 8px;font-weight:500}',
+      '.dpo-mode-options,.dpo-model-list{min-width:0;border:0.5px solid var(--dsw-alias-border-l4);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-layer-3)}',
+      '.dpo-mode-options{overflow:hidden}',
+      '.dpo-model-list{display:grid;gap:8px;max-height:min(280px,40vh);overflow:auto;overscroll-behavior:contain;padding:8px}',
+      '.dpo-model-group+.dpo-model-group{border-top:0.5px solid var(--dsw-alias-border-l3);padding-top:8px}',
+      '.dpo-model-provider{margin:0 0 4px;padding:0 8px;color:var(--dsw-alias-label-tertiary);font-size:.9em;font-weight:500;overflow-wrap:anywhere}',
+      '.dpo-model-option{display:flex;align-items:center;gap:10px;min-width:0;padding:7px 8px;border-radius:var(--dsw-radius-sm);overflow-wrap:anywhere}',
+      '.dpo-mode-options .dpo-model-option{align-items:flex-start;gap:12px;padding:11px 12px;border-radius:0}',
+      '.dpo-mode-options .dpo-model-option+.dpo-model-option{border-top:0.5px solid var(--dsw-alias-border-l3)}',
+      '.dpo-model-option-copy{display:grid;gap:2px;min-width:0}',
+      '.dpo-model-option-title{font-weight:500}',
+      '.dpo-model-option-hint{color:var(--dsw-alias-label-secondary);font-size:.9em}',
+      '.dpo-model-option:has(input:enabled){cursor:pointer}',
+      '.dpo-model-option:hover:has(input:enabled){background:var(--dsw-alias-interactive-bg-hover)}',
+      '.dpo-model-option:has(input:checked){background:var(--dsw-alias-interactive-bg-active)}',
+      '.dpo-model-option input{flex:none;margin:0;accent-color:var(--dsw-alias-state-business-primary)}',
+      '.dpo-mode-options input{margin-block-start:.3em}',
+      '.dpo-settings :is(input,button):focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dpo-settings-feedback,.dpo-settings-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}',
+      '.dpo-settings-feedback .dpo-settings-status,.dpo-settings-actions .dpo-settings-error{flex:1 1 16em}',
+      '.dpo-settings-actions{justify-content:flex-end;padding-top:12px;border-top:.5px solid var(--dsw-alias-border-l2)}',
+      '.dpo-settings-buttons{margin-inline-start:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}',
+      '.dpo-settings-button{appearance:none;font:inherit;line-height:1.5;padding:5px 14px;border:.5px solid transparent;border-radius:var(--dsw-radius-md);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}',
+      '.dpo-settings-button:hover:enabled{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.dpo-settings-button:disabled{opacity:.4;cursor:default}',
+      '.dpo-settings-save,.dpo-settings-save:hover:enabled{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-3)}',
+      '.dpo-settings-save:hover:enabled{opacity:.85}',
+      '.dpo-settings-link{appearance:none;padding:2px 0;border:0;background:transparent;color:var(--dsw-alias-brand-primary);font:inherit;font-size:.92em;cursor:pointer}',
+      '.dpo-settings-link:hover:enabled{text-decoration:underline}',
+      '.dpo-settings-link:disabled{opacity:.4;cursor:default}',
+      '.dpo-settings-status,.dpo-settings-error{margin:0;min-width:0;font-size:.92em;overflow-wrap:anywhere}',
+      '.dpo-setting .dpo-settings-status:not(:last-child){margin-bottom:8px}',
+      '.dpo-settings-status{color:var(--dsw-alias-label-secondary)}',
+      '.dpo-settings-error{color:var(--dsw-alias-state-error-primary)}',
       '@media (max-width:720px){.dpo-dialog{border-radius:var(--dsw-radius-xl)}.dpo-head{padding:16px 12px 0 18px}.dpo-body{padding:12px 18px 4px}.dpo-foot{padding:12px 18px 16px}}',
       '@media (prefers-reduced-motion:reduce){.dpo-close,.dpo-btn,.dpo-input,.dpo-q,.dpo-trigger{transition:none}}',
     ].join('\n')
 
-    const runtime = { localeService: null, controller: null, requestId: 0 }
+    const runtime = { localeService: null, controller: null, requestId: 0, readConfig: null }
     const store = createStore()
     const selectDraft = state => (state && typeof state.draft === 'string' ? state.draft : '')
     const FOCUSABLE = 'button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
@@ -217,6 +312,8 @@ window.__ModuleLoader__.load({
         targetActions: null,
         sessionId: null,
         useContext: true,
+        summaryMode: 'ai',
+        contextOpen: false,
         contextMeta: null,
       }
       const listeners = new Set()
@@ -274,7 +371,34 @@ window.__ModuleLoader__.load({
       ))
     }
 
+    /** A volatile settings field exposes `get()`; a plain value is returned as-is. */
+    function readField(field) {
+      if (field && typeof field.get === 'function') {
+        try { return field.get() } catch { return '' }
+      }
+      return typeof field === 'string' ? field : ''
+    }
+
+    /**
+     * Defaults for one dialog, read from the plugin settings each time it opens.
+     * A missing or unreadable config falls back to context on, AI summary.
+     */
+    function contextDefaults() {
+      const fallback = { useContext: true, summaryMode: 'ai' }
+      if (typeof runtime.readConfig !== 'function') return fallback
+      try {
+        const value = runtime.readConfig() || {}
+        return {
+          useContext: readField(value.contextDefault) !== 'off',
+          summaryMode: readField(value.summaryMode) === 'local' ? 'local' : 'ai',
+        }
+      } catch {
+        return fallback
+      }
+    }
+
     function openPanel(draft, targetActions, sessionId) {
+      const defaults = contextDefaults()
       store.set({
         open: true,
         view: 'edit',
@@ -290,7 +414,9 @@ window.__ModuleLoader__.load({
         notice: '',
         targetActions: targetActions || null,
         sessionId: typeof sessionId === 'string' ? sessionId : null,
-        useContext: true,
+        useContext: defaults.useContext,
+        summaryMode: defaults.summaryMode,
+        contextOpen: false,
         contextMeta: null,
       })
     }
@@ -320,7 +446,7 @@ window.__ModuleLoader__.load({
       store.set({ answers: next, error: '', notice: '' })
     }
 
-    async function postOptimize(draft, answers, force, signal, sessionId, useContext) {
+    async function postOptimize(draft, answers, force, signal, sessionId, useContext, summaryMode) {
       const language = currentLanguage()
       const response = await fetch(ENDPOINT, {
         method: 'POST',
@@ -332,6 +458,7 @@ window.__ModuleLoader__.load({
           force: force === true,
           sessionId: typeof sessionId === 'string' ? sessionId : null,
           useContext: useContext !== false,
+          summaryMode: summaryMode === 'local' ? 'local' : 'ai',
         }),
         signal,
       })
@@ -381,6 +508,7 @@ window.__ModuleLoader__.load({
           controller.signal,
           snapshot.sessionId,
           snapshot.useContext,
+          snapshot.summaryMode,
         )
         if (requestId !== runtime.requestId) return
         const contextMeta = payload.context && typeof payload.context === 'object' ? payload.context : null
@@ -428,6 +556,12 @@ window.__ModuleLoader__.load({
 
     function regenerate() {
       runOptimize(store.getSnapshot().lastPairs, true)
+    }
+
+    /** "Use the defaults" inside the dialog: the settings decide, this request does not persist. */
+    function resetContextSettings() {
+      const defaults = contextDefaults()
+      store.set({ useContext: defaults.useContext, summaryMode: defaults.summaryMode, contextMeta: null })
     }
 
     async function copyResult() {
@@ -480,7 +614,7 @@ window.__ModuleLoader__.load({
       return provider && model ? JSON.stringify([provider, model]) : ''
     }
 
-    function ModelSettings({ form, sessionRemote }) {
+    function ModelSettings({ form, settingsDocument, sessionRemote }) {
       const t = strings().settings
       const subscribe = React.useCallback(listener => form.subscribe(listener), [form])
       const getSnapshot = React.useCallback(() => form.getSnapshot(), [form])
@@ -490,12 +624,33 @@ window.__ModuleLoader__.load({
       const [failed, setFailed] = React.useState(false)
       const [catalog, setCatalog] = React.useState(null)
       const [attempt, setAttempt] = React.useState(0)
+      const [settingsAttempt, setSettingsAttempt] = React.useState(0)
+      const [checkingSettings, setCheckingSettings] = React.useState(true)
       const value = snapshot.value
       const savedRoute = routeKey(value?.provider?.trim(), value?.model?.trim())
       const savedMode = value?.modelMode || (savedRoute ? 'dedicated' : 'conversation')
+      const savedContextDefault = readField(value?.contextDefault) === 'off' ? 'off' : 'on'
+      const savedSummaryMode = readField(value?.summaryMode) === 'local' ? 'local' : 'ai'
       const mode = draft?.mode ?? savedMode
       const selected = draft?.selected ?? savedRoute
+      const contextDefault = draft?.contextDefault ?? savedContextDefault
+      const summaryMode = draft?.summaryMode ?? savedSummaryMode
       const dedicated = mode === 'dedicated'
+      const ready = snapshot.status === 'ready'
+      const readOnly = snapshot.mode === 'memory' || (ready && !snapshot.writable)
+      const settingsStatus = checkingSettings ? t.settingsLoading
+        : snapshot.status === 'unavailable' ? t.settingsUnavailable : t.settingsReadFailed
+
+      React.useEffect(() => {
+        if (form.getSnapshot().mode === 'memory') return
+        let active = true
+        setCheckingSettings(true)
+        // Client bundles can mount after the initial settings snapshot was read.
+        Promise.resolve().then(() => settingsDocument.load()).catch(() => {}).finally(() => {
+          if (active) setCheckingSettings(false)
+        })
+        return () => { active = false }
+      }, [form, settingsDocument, settingsAttempt])
 
       React.useEffect(() => {
         if (!dedicated) return
@@ -513,14 +668,16 @@ window.__ModuleLoader__.load({
         return () => { active = false }
       }, [dedicated, sessionRemote, attempt])
 
-      if (snapshot.status === 'loading') return null
-      const disabled = snapshot.status !== 'ready' || !snapshot.writable || saving
+      const disabled = readOnly || saving
       const groups = catalog?.groups ?? []
+      const hasModels = groups.some(group => group.models.length > 0)
       const known = groups.some(group => group.models.some(model => routeKey(group.id, model.id) === selected))
-      const changed = mode !== savedMode || (dedicated && selected !== savedRoute)
+      const changed = mode !== savedMode || (dedicated && selected !== savedRoute) ||
+        contextDefault !== savedContextDefault || summaryMode !== savedSummaryMode
+      const canSave = ready && snapshot.writable && !disabled && changed && (!dedicated || known)
 
       function edit(patch) {
-        setDraft({ mode, selected, revision: draft?.revision ?? snapshot.revision, ...patch })
+        setDraft(current => ({ revision: snapshot.revision, ...current, ...patch }))
       }
 
       function discard() {
@@ -530,7 +687,7 @@ window.__ModuleLoader__.load({
 
       async function save(event) {
         event.preventDefault()
-        if (disabled || !changed || (dedicated && !known)) return
+        if (!canSave) return
         const ops = [{ op: 'set', path: ['modelMode'], value: mode }]
         if (dedicated) {
           const [provider, model] = JSON.parse(selected)
@@ -539,10 +696,14 @@ window.__ModuleLoader__.load({
             { op: 'set', path: ['model'], value: model },
           )
         }
+        ops.push(
+          { op: 'set', path: ['contextDefault'], value: contextDefault },
+          { op: 'set', path: ['summaryMode'], value: summaryMode },
+        )
         setSaving(true)
         setFailed(false)
         try {
-          if (await form.mutate(ops, draft.revision) === false) setFailed(true)
+          if (await form.mutate(ops, draft.revision ?? snapshot.revision) === false) setFailed(true)
           else setDraft(null)
         } catch {
           setFailed(true)
@@ -553,35 +714,96 @@ window.__ModuleLoader__.load({
 
       return h('form', { className: 'dpo-settings', onSubmit: save },
         h('style', null, CSS),
-        h('label', { className: 'dpo-setting' }, t.mode,
-          h('select', { value: mode, disabled, onChange: event => edit({ mode: event.target.value }) },
-            h('option', { value: 'conversation' }, t.conversation),
-            h('option', { value: 'dedicated' }, t.dedicated),
-          ),
-        ),
-        dedicated && h('label', { className: 'dpo-setting' }, t.model,
-          h('select', { value: selected, disabled: disabled || !catalog, onChange: event => edit({ selected: event.target.value }) },
-            h('option', { value: '', disabled: true }, t.choose),
-            selected && !known && h('option', { value: selected, disabled: true },
-              `${JSON.parse(selected).join(' / ')} (${catalog === null ? t.loading : t.unavailable})`,
-            ),
-            groups.map(group => h('optgroup', { key: group.id, label: group.name ?? group.id },
-              group.models.map(model => h('option', { key: model.id, value: routeKey(group.id, model.id) }, model.name ?? model.id)),
+        h('fieldset', { className: 'dpo-setting', disabled },
+          h('legend', null, t.mode),
+          h('div', { className: 'dpo-mode-options' },
+            ['conversation', 'dedicated'].map(value => h('label', { key: value, className: 'dpo-model-option' },
+              h('input', { type: 'radio', name: 'dpo-model-mode', value, checked: mode === value, onChange: () => edit({ mode: value }) }),
+              h('span', { className: 'dpo-model-option-copy' },
+                h('span', { className: 'dpo-model-option-title' }, t[value]),
+                h('span', { className: 'dpo-model-option-hint' }, t[`${value}Hint`]),
+              ),
             )),
           ),
         ),
-        dedicated && catalog === null && h('p', { role: 'status', className: 'dpo-settings-status' }, t.loading),
-        dedicated && catalog && !groups.some(group => group.models.length) &&
-          h('p', { role: 'status', className: 'dpo-settings-status' }, t.noModels),
-        dedicated && (catalog === false || catalog?.failures?.length > 0) && h('div', { className: 'dpo-settings' },
-          h('p', { role: 'status', className: 'dpo-settings-status' }, catalog === false ? t.catalogFailed : t.catalogPartial),
-          h('div', null, h('button', { type: 'button', className: 'dpo-btn', onClick: () => setAttempt(attempt + 1) }, t.retry)),
+        dedicated && h('fieldset', { className: 'dpo-setting', disabled },
+          h('legend', null, t.model),
+          catalog === null && h('p', { role: 'status', className: 'dpo-settings-status' }, t.loading),
+          catalog && selected && !known && h('p', { role: 'status', className: 'dpo-settings-status' },
+            `${JSON.parse(selected).join(' / ')} (${t.unavailable})`,
+          ),
+          hasModels && h('div', { className: 'dpo-model-list' },
+            groups.map(group => h('div', { key: group.id, className: 'dpo-model-group', role: 'group', 'aria-label': group.name ?? group.id },
+              h('p', { className: 'dpo-model-provider' }, group.name ?? group.id),
+              group.models.map(model => {
+                const value = routeKey(group.id, model.id)
+                return h('label', { key: model.id, className: 'dpo-model-option' },
+                  h('input', { type: 'radio', name: 'dpo-dedicated-model', value, checked: selected === value, onChange: () => edit({ selected: value }) }),
+                  model.name ?? model.id,
+                )
+              }),
+            )),
+          ),
         ),
-        !snapshot.writable && h('p', { className: 'dpo-settings-status' }, t.readOnly),
-        failed && h('p', { role: 'alert', className: 'dpo-settings-error' }, t.saveFailed),
-        snapshot.writable && h('div', { className: 'dpo-settings-actions' },
-          (draft || failed) && h('button', { type: 'button', className: 'dpo-btn', onClick: discard, disabled: saving }, t.discard),
-          h('button', { type: 'submit', className: 'dpo-btn dpo-primary', disabled: disabled || !changed || (dedicated && !known) }, saving ? t.saving : t.save),
+        dedicated && catalog !== null && (!hasModels || catalog.failures?.length > 0) && h('div', { className: 'dpo-settings-feedback' },
+          h('p', { role: 'status', className: 'dpo-settings-status' },
+            catalog === false ? t.catalogFailed : (catalog.failures?.length ? t.catalogPartial : t.noModels),
+          ),
+          h('button', { type: 'button', className: 'dpo-settings-link', disabled: saving, onClick: () => setAttempt(attempt + 1) }, t.retry),
+        ),
+        h('fieldset', { className: 'dpo-setting', disabled },
+          h('legend', null, t.contextMode),
+          h('div', { className: 'dpo-mode-options' },
+            [
+              { value: 'on', title: t.contextOn, hint: t.contextOnHint },
+              { value: 'off', title: t.contextOff, hint: t.contextOffHint },
+            ].map(option => h('label', { key: option.value, className: 'dpo-model-option' },
+              h('input', {
+                type: 'radio',
+                name: 'dpo-context-default',
+                value: option.value,
+                checked: contextDefault === option.value,
+                onChange: () => edit({ contextDefault: option.value }),
+              }),
+              h('span', { className: 'dpo-model-option-copy' },
+                h('span', { className: 'dpo-model-option-title' }, option.title),
+                h('span', { className: 'dpo-model-option-hint' }, option.hint),
+              ),
+            )),
+          ),
+        ),
+        h('fieldset', { className: 'dpo-setting', disabled },
+          h('legend', null, t.summaryMode),
+          h('div', { className: 'dpo-mode-options' },
+            [
+              { value: 'ai', title: t.summaryAi, hint: t.summaryAiHint },
+              { value: 'local', title: t.summaryLocal, hint: t.summaryLocalHint },
+            ].map(option => h('label', { key: option.value, className: 'dpo-model-option' },
+              h('input', {
+                type: 'radio',
+                name: 'dpo-summary-default',
+                value: option.value,
+                checked: summaryMode === option.value,
+                onChange: () => edit({ summaryMode: option.value }),
+              }),
+              h('span', { className: 'dpo-model-option-copy' },
+                h('span', { className: 'dpo-model-option-title' }, option.title),
+                h('span', { className: 'dpo-model-option-hint' }, option.hint),
+              ),
+            )),
+          ),
+        ),
+        readOnly && h('p', { role: 'status', className: 'dpo-settings-status' }, t.readOnly),
+        !ready && !readOnly && h('div', { className: 'dpo-settings-feedback' },
+          h('p', { role: 'status', className: 'dpo-settings-status' }, settingsStatus),
+          !checkingSettings && h('button', { type: 'button', className: 'dpo-settings-link', onClick: () => setSettingsAttempt(settingsAttempt + 1) }, t.reloadSettings),
+        ),
+        !readOnly && h('div', { className: 'dpo-settings-actions' },
+          failed && h('p', { role: 'alert', className: 'dpo-settings-error' }, t.saveFailed),
+          h('div', { className: 'dpo-settings-buttons' },
+            (draft || failed) && h('button', { type: 'button', className: 'dpo-settings-button', onClick: discard, disabled: saving }, t.discard),
+            h('button', { type: 'submit', className: 'dpo-settings-button dpo-settings-save', disabled: !canSave }, saving ? t.saving : t.save),
+          ),
         ),
       )
     }
@@ -678,10 +900,15 @@ window.__ModuleLoader__.load({
 
       const subtitle = snapshot.view === 'questions' ? t.questionsHint : t.subtitle
       const meta = snapshot.contextMeta
+      const sourceLabel = meta === null || meta === undefined ? ''
+        : meta.summary === 'cached' ? t.summaryCached
+          : meta.summary === 'local' ? t.summaryLocal
+            : meta.summary === 'ai' ? t.summaryAi : ''
       const contextLine = snapshot.useContext === false || meta === null || meta === undefined
         ? ''
         : meta.available === true
-          ? format(t.contextUsed, { messages: meta.messages, chars: meta.chars })
+          ? (sourceLabel.length > 0 ? `${sourceLabel} · ` : '')
+            + format(t.contextUsed, { messages: meta.messages, chars: meta.chars })
             + (meta.truncated === true ? t.contextTruncated : '')
           : t.contextEmpty
       const shapeLabel = snapshot.shape === 'continue'
@@ -716,7 +943,26 @@ window.__ModuleLoader__.load({
 
             snapshot.view === 'edit'
               ? h('div', null,
-                h('label', { className: 'dpo-label', htmlFor: 'dpo-draft' }, t.inputLabel),
+                h('div', { className: 'dpo-labelrow' },
+                  h('label', { className: 'dpo-label', htmlFor: 'dpo-draft' }, t.inputLabel),
+                  h('button', {
+                    type: 'button',
+                    className: 'dpo-ctxbtn',
+                    'aria-expanded': snapshot.contextOpen ? 'true' : 'false',
+                    'aria-controls': 'dpo-context-panel',
+                    'data-active': snapshot.useContext === false ? 'false' : 'true',
+                    title: `${t.contextTitle} — ${snapshot.useContext === false ? t.contextOffState : snapshot.summaryMode === 'local' ? t.contextLocal : t.contextAi}`,
+                    'aria-label': t.contextTitle,
+                    onClick: () => store.set({ contextOpen: !snapshot.contextOpen }),
+                  }, h('svg', {
+                    viewBox: '0 0 24 24', width: 15, height: 15, fill: 'none', stroke: 'currentColor',
+                    strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true,
+                  },
+                  h('path', { d: 'M4 8h9M17 8h3M4 16h3M11 16h9' }),
+                  h('circle', { cx: 15, cy: 8, r: 2 }),
+                  h('circle', { cx: 9, cy: 16, r: 2 }),
+                  )),
+                ),
                 h('textarea', {
                   id: 'dpo-draft',
                   className: 'dpo-input',
@@ -727,14 +973,37 @@ window.__ModuleLoader__.load({
                   onChange: event => setDraft(event.target.value),
                 }),
                 h('div', { className: 'dpo-context' },
-                  h('label', { className: 'dpo-check' },
-                    h('input', {
-                      type: 'checkbox',
-                      checked: snapshot.useContext !== false,
-                      onChange: event => store.set({ useContext: event.target.checked, contextMeta: null }),
-                    }),
-                    h('span', null, t.contextLabel),
-                  ),
+                  snapshot.contextOpen
+                    ? h('div', { className: 'dpo-panel', id: 'dpo-context-panel', role: 'group', 'aria-label': t.contextTitle },
+                      h('label', { className: 'dpo-check' },
+                        h('input', {
+                          type: 'checkbox',
+                          checked: snapshot.useContext !== false,
+                          onChange: event => store.set({ useContext: event.target.checked, contextMeta: null }),
+                        }),
+                        h('span', null, t.contextLabel),
+                      ),
+                      h('p', { className: 'dpo-panel-title' }, t.contextMode),
+                      [
+                        { value: 'ai', title: t.contextAi, hint: t.contextAiHint },
+                        { value: 'local', title: t.contextLocal, hint: t.contextLocalHint },
+                      ].map(option => h('label', { key: option.value, className: 'dpo-choice' },
+                        h('input', {
+                          type: 'radio',
+                          name: 'dpo-summary-mode',
+                          value: option.value,
+                          checked: snapshot.summaryMode === option.value,
+                          disabled: snapshot.useContext === false,
+                          onChange: () => store.set({ summaryMode: option.value, contextMeta: null }),
+                        }),
+                        h('span', { className: 'dpo-choice-copy' },
+                          h('span', { className: 'dpo-choice-title' }, option.title),
+                          h('span', { className: 'dpo-meta' }, option.hint),
+                        ),
+                      )),
+                      h('button', { type: 'button', className: 'dpo-link', onClick: resetContextSettings }, t.contextReset),
+                    )
+                    : null,
                   contextLine ? h('div', { className: 'dpo-meta' }, contextLine) : null,
                 ),
               )
@@ -827,6 +1096,14 @@ window.__ModuleLoader__.load({
         const localeService = ctx.get('locale')
         if (localeService) runtime.localeService = localeService
 
+        // The dialog starts from the saved defaults; read them again on every open.
+        ctx.inject(['configForms'], configCtx => {
+          try {
+            const form = configCtx.configForms.get(SETTINGS_ID)
+            if (form && typeof form.getSnapshot === 'function') runtime.readConfig = () => form.getSnapshot().value
+          } catch { /* the settings service may not expose this plugin row */ }
+        })
+
         ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
           name: 'conversation.input.left',
           id: 'prompt-optimizer.trigger',
@@ -843,11 +1120,12 @@ window.__ModuleLoader__.load({
 
         ctx.inject(['configForms', 'remote', 'remote.session'], settingsCtx => {
           const form = settingsCtx.configForms.get(SETTINGS_ID)
+          const settingsDocument = settingsCtx.configForms.describe()
           const sessionRemote = settingsCtx.remote.session
           settingsCtx.slots.inject('plugins.bundle.config', () => settingsCtx.slots.register({
             name: 'plugins.bundle.config',
             key: '@local/prompt-optimizer',
-          }, () => h(ModelSettings, { form, sessionRemote })))
+          }, () => h(ModelSettings, { form, settingsDocument, sessionRemote })))
         })
       },
     }

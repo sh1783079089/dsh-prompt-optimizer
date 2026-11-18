@@ -38,49 +38,57 @@ prompt comes back as a full prompt.
 
 ## Conversation context
 
-The plugin is not limited to the first message. Every request also reads the
-current session and compresses it into a bounded digest, so a prompt written
-mid-conversation is optimized against the work already done.
+**Use this conversation as context** starts from the plugin settings, on by
+default. The context icon beside the draft opens the settings for that one
+request: a checkbox for the context and a choice between AI summary and local
+compression. The plugin reads the active session through `Session.deriveMessages()`
+and uses only visible text from user and assistant turns. It excludes session
+system prompts, DSH compaction checkpoints, tool calls and results, reasoning,
+and attachments.
 
-- **Source.** `ctx.sessions.get(sessionId)` on the host, then
-  `Session.deriveMessages()` — the same message list the model sees, not a
-  re-parse of the raw log.
-- **Compression.** Only human and assistant turns survive. The system prompt and
-  tool results never enter the digest; a tool call is reduced to a short
-  `[tools: name]` marker. Each turn is capped, and once the budget is spent the
-  oldest turns are dropped behind an explicit
-  `[… N earlier messages compressed away …]` marker, so the model knows a stretch
-  is missing rather than empty.
-- **Use.** The model is told to resolve references such as "this", "that",
-  "continue" or "the previous version", to keep decisions and constraints already
-  agreed, to never re-ask for a fact the history states, and to restate just
-  enough working context to make a bare follow-up self-contained.
-- **Control.** The dialog shows a **Use this conversation as context** toggle,
-  on by default. After the first request it also reports how many messages were
-  read and how large the digest became. Turning it off sends the draft alone.
-- **Budget.** `maxContextChars` in the plugin configuration sets the digest size
-  (default 6,000 characters, capped at 24,000).
+The history is prepared in one of two ways:
 
-Compression is deterministic: it adds no extra model call, so a request stays
-one model round trip.
+- **Local compression** is deterministic: it keeps the newest turns, caps each
+  one, and marks the dropped stretch with an explicit elision marker. It makes
+  no model call.
+- **AI summary** (default) sends the filtered history to the optimizer's model
+  with a dedicated system prompt that preserves goals, constraints, decisions,
+  progress, and open work. It makes one model call.
+
+`maxContextChars` bounds both the summary input and the context sent to the
+optimizer. It defaults to 6,000 characters and is capped at 24,000. The summary
+call requests up to 800 output tokens. A history that already fits the budget
+without truncation is sent as-is, so a short conversation never pays for a
+summary call. If the summary fails or exceeds its share of the request timeout,
+the request uses local compression.
+
+Successful summaries stay in host memory for up to 30 minutes, with a limit of
+32 entries. Matching requests reuse the summary while the filtered history,
+model, and summary settings stay the same; concurrent matching requests share
+one summary call. Drafts and answers never affect the cache key. The dialog
+reports which source it used: AI summary, cached AI summary, or local
+compression.
 
 ## Model use
 
-Open **Plugins → Prompt optimizer**, choose the model source, and select **Save**.
+Open **Plugins → Prompt optimizer**, choose the model source and the context
+defaults, and select **Save**.
 
 - **Use the conversation model** (default) follows the current session's model
   selection. A new session without its own selection uses the DSH default.
 - **Use a dedicated model** sends drafts and any enabled conversation context
   to the model you pick from DSH's catalog.
+- **Conversation context** sets whether the dialog starts with the context
+  toggle on or off.
+- **How to prepare the context** picks AI summary or local compression as the
+  default. The dialog can change it for one request without saving anything.
 
 Existing `provider` and `model` overrides continue to act as a dedicated model
 until you change the mode in the settings. `timeoutMs` overrides the 90-second
 deadline.
 
-Each optimization is one model call, capped at 2,000 output tokens. Prompts are
-not stored by the plugin: the draft and answers travel from the page to the host
-endpoint, and only the result returns. The conversation digest is built per
-request and never persisted.
+The optimization call requests up to 2,000 output tokens. Preparing a new AI
+summary adds one model call. Drafts and answers stay within the request.
 
 ## Limits
 
