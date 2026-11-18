@@ -80,8 +80,9 @@ Request: `{ draft, answers, force, locale, sessionId, useContext, summaryMode }`
 where `summaryMode` is `ai` | `local` and defaults to the plugin setting.
 Response: `{ ok, stage, prompt?, questions?, shape?, notes?, context? }`, where
 `stage` is `optimized` or `questions`, `shape` is `fresh` | `continue` | `null`,
-and `context` is `{ available, messages, chars, truncated, summary }` with
-`summary` being `ai` | `cached` | `local` | `null`.
+and `context` is `{ available, messages, chars, truncated, summary, budget }`
+with `summary` being `ai` | `cached` | `local` | `null` and `budget` the
+effective character limit (or `null`).
 Errors: `{ ok: false, code, message }` with `400` (empty/too long/body), `409`
 (no model), `413`, `502` (model), `503` (no LLM service), `405` (method).
 

@@ -12,6 +12,11 @@ window.__ModuleLoader__.load({
     const h = React.createElement
     const ENDPOINT = '/prompt-optimizer/optimize'
     const SETTINGS_ID = 'prompt-optimizer'
+    // The host clamps the budget and falls back to these defaults.
+    const DEFAULT_CONTEXT_BUDGET = 6000
+    const DEFAULT_TIMEOUT_MS = 90000
+    const CONTEXT_BUDGETS = [6000, 12000, 24000]
+    const TIMEOUT_OPTIONS = [30000, 60000, 90000, 180000]
 
     const STRINGS = {
       en: {
@@ -51,7 +56,8 @@ window.__ModuleLoader__.load({
         summaryAi: 'AI summary',
         summaryCached: 'AI summary (cached)',
         summaryLocal: 'Local compression',
-        contextUsed: '{messages} messages, {chars} characters',
+        contextUsed: '{messages} messages, {chars} / {budget} characters',
+        contextUsedPlain: '{messages} messages, {chars} characters',
         contextTruncated: ', earlier parts elided',
         contextEmpty: 'No earlier messages in this session.',
         settings: {
@@ -71,6 +77,12 @@ window.__ModuleLoader__.load({
           summaryAiHint: 'One extra model call; a history that already fits is sent as-is.',
           summaryLocal: 'Local compression',
           summaryLocalHint: 'No extra model call; the oldest turns are elided first.',
+          budget: 'Context budget',
+          budgetHint: 'Upper limit for the summary input and the context sent to the optimizer.',
+          timeout: 'Request timeout',
+          timeoutHint: 'Shared by the summary and the optimization call.',
+          characters: 'characters',
+          seconds: 's',
           loading: 'Loading models…',
           catalogFailed: 'Could not load the model list.',
           catalogPartial: 'Some providers could not list their models.',
@@ -136,7 +148,8 @@ window.__ModuleLoader__.load({
         summaryAi: 'AI 摘要',
         summaryCached: 'AI 摘要（缓存）',
         summaryLocal: '本地压缩',
-        contextUsed: '{messages} 条消息，{chars} 字',
+        contextUsed: '{messages} 条消息，{chars} / {budget} 字',
+        contextUsedPlain: '{messages} 条消息，{chars} 字',
         contextTruncated: '，较早部分已省略',
         contextEmpty: '本会话暂无更早的消息。',
         settings: {
@@ -156,6 +169,12 @@ window.__ModuleLoader__.load({
           summaryAiHint: '额外调用一次模型；历史本就不长时直接原样带上。',
           summaryLocal: '本地压缩',
           summaryLocalHint: '不额外调用模型；优先省略较早的轮次。',
+          budget: '上下文预算',
+          budgetHint: '摘要输入和发给优化模型的上下文的上限。',
+          timeout: '请求超时',
+          timeoutHint: '摘要与优化共用这个总超时。',
+          characters: '字',
+          seconds: '秒',
           loading: '正在加载模型…',
           catalogFailed: '无法加载模型列表。',
           catalogPartial: '部分提供商的模型列表加载失败。',
@@ -371,12 +390,27 @@ window.__ModuleLoader__.load({
       ))
     }
 
+    /** Group digits for character and millisecond counts. */
+    function count(value) {
+      return Number(value).toLocaleString()
+    }
+
     /** A volatile settings field exposes `get()`; a plain value is returned as-is. */
     function readField(field) {
       if (field && typeof field.get === 'function') {
         try { return field.get() } catch { return '' }
       }
       return typeof field === 'string' ? field : ''
+    }
+
+    /** A positive integer from a numeric settings field, or 0 when unset. */
+    function readNumber(field) {
+      let raw = field
+      if (field && typeof field.get === 'function') {
+        try { raw = field.get() } catch { return 0 }
+      }
+      const value = typeof raw === 'number' ? raw : Number(raw)
+      return Number.isFinite(value) && value > 0 ? Math.round(value) : 0
     }
 
     /**
@@ -631,10 +665,14 @@ window.__ModuleLoader__.load({
       const savedMode = value?.modelMode || (savedRoute ? 'dedicated' : 'conversation')
       const savedContextDefault = readField(value?.contextDefault) === 'off' ? 'off' : 'on'
       const savedSummaryMode = readField(value?.summaryMode) === 'local' ? 'local' : 'ai'
+      const savedBudget = readNumber(value?.maxContextChars) || DEFAULT_CONTEXT_BUDGET
+      const savedTimeout = readNumber(value?.timeoutMs) || DEFAULT_TIMEOUT_MS
       const mode = draft?.mode ?? savedMode
       const selected = draft?.selected ?? savedRoute
       const contextDefault = draft?.contextDefault ?? savedContextDefault
       const summaryMode = draft?.summaryMode ?? savedSummaryMode
+      const budget = draft?.budget ?? savedBudget
+      const timeout = draft?.timeout ?? savedTimeout
       const dedicated = mode === 'dedicated'
       const ready = snapshot.status === 'ready'
       const readOnly = snapshot.mode === 'memory' || (ready && !snapshot.writable)
@@ -673,7 +711,8 @@ window.__ModuleLoader__.load({
       const hasModels = groups.some(group => group.models.length > 0)
       const known = groups.some(group => group.models.some(model => routeKey(group.id, model.id) === selected))
       const changed = mode !== savedMode || (dedicated && selected !== savedRoute) ||
-        contextDefault !== savedContextDefault || summaryMode !== savedSummaryMode
+        contextDefault !== savedContextDefault || summaryMode !== savedSummaryMode ||
+        budget !== savedBudget || timeout !== savedTimeout
       const canSave = ready && snapshot.writable && !disabled && changed && (!dedicated || known)
 
       function edit(patch) {
@@ -699,6 +738,8 @@ window.__ModuleLoader__.load({
         ops.push(
           { op: 'set', path: ['contextDefault'], value: contextDefault },
           { op: 'set', path: ['summaryMode'], value: summaryMode },
+          { op: 'set', path: ['maxContextChars'], value: budget },
+          { op: 'set', path: ['timeoutMs'], value: timeout },
         )
         setSaving(true)
         setFailed(false)
@@ -791,6 +832,44 @@ window.__ModuleLoader__.load({
                 h('span', { className: 'dpo-model-option-hint' }, option.hint),
               ),
             )),
+          ),
+        ),
+        h('fieldset', { className: 'dpo-setting', disabled },
+          h('legend', null, t.budget),
+          h('p', { className: 'dpo-settings-status' }, t.budgetHint),
+          h('div', { className: 'dpo-mode-options' },
+            (CONTEXT_BUDGETS.includes(savedBudget) ? CONTEXT_BUDGETS : [savedBudget, ...CONTEXT_BUDGETS])
+              .map(option => h('label', { key: option, className: 'dpo-model-option' },
+                h('input', {
+                  type: 'radio',
+                  name: 'dpo-context-budget',
+                  value: String(option),
+                  checked: budget === option,
+                  onChange: () => edit({ budget: option }),
+                }),
+                h('span', { className: 'dpo-model-option-copy' },
+                  h('span', { className: 'dpo-model-option-title' }, `${count(option)} ${t.characters}`),
+                ),
+              )),
+          ),
+        ),
+        h('fieldset', { className: 'dpo-setting', disabled },
+          h('legend', null, t.timeout),
+          h('p', { className: 'dpo-settings-status' }, t.timeoutHint),
+          h('div', { className: 'dpo-mode-options' },
+            (TIMEOUT_OPTIONS.includes(savedTimeout) ? TIMEOUT_OPTIONS : [savedTimeout, ...TIMEOUT_OPTIONS])
+              .map(option => h('label', { key: option, className: 'dpo-model-option' },
+                h('input', {
+                  type: 'radio',
+                  name: 'dpo-timeout',
+                  value: String(option),
+                  checked: timeout === option,
+                  onChange: () => edit({ timeout: option }),
+                }),
+                h('span', { className: 'dpo-model-option-copy' },
+                  h('span', { className: 'dpo-model-option-title' }, `${option / 1000} ${t.seconds}`),
+                ),
+              )),
           ),
         ),
         readOnly && h('p', { role: 'status', className: 'dpo-settings-status' }, t.readOnly),
@@ -908,7 +987,9 @@ window.__ModuleLoader__.load({
         ? ''
         : meta.available === true
           ? (sourceLabel.length > 0 ? `${sourceLabel} · ` : '')
-            + format(t.contextUsed, { messages: meta.messages, chars: meta.chars })
+            + (meta.budget == null
+              ? format(t.contextUsedPlain, { messages: meta.messages, chars: count(meta.chars) })
+              : format(t.contextUsed, { messages: meta.messages, chars: count(meta.chars), budget: count(meta.budget) }))
             + (meta.truncated === true ? t.contextTruncated : '')
           : t.contextEmpty
       const shapeLabel = snapshot.shape === 'continue'

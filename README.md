@@ -54,6 +54,8 @@ Open **Plugins → Prompt optimizer**, choose the model source, and click **Save
 
 Existing `provider` and `model` overrides continue to select a dedicated model until you change the mode in the plugin settings. The plugin row also accepts these options.
 
+The same page sets the **context budget** (6,000 / 12,000 / 24,000 characters) and the **request timeout** (30 / 60 / 90 / 180 seconds). Both apply to the summary and to the optimization call; a value saved outside these presets stays selectable as its own choice.
+
 | Option | Default | Description |
 |---|---:|---|
 | `timeoutMs` | `90000` | Shared timeout in milliseconds for summarization and optimization. |

@@ -82,6 +82,14 @@ defaults, and select **Save**.
   toggle on or off.
 - **How to prepare the context** picks AI summary or local compression as the
   default. The dialog can change it for one request without saving anything.
+- **Context budget** caps the summary input and the context sent to the
+  optimizer: 6,000 characters by default, selectable up to 24,000.
+- **Request timeout** is shared by the summary and the optimization call,
+  90 seconds by default.
+
+The dialog reports the context it used as `used / budget`, for example
+`AI summary · 4 messages, 1,842 / 6,000 characters`, plus a marker when older
+parts were elided.
 
 Existing `provider` and `model` overrides continue to act as a dedicated model
 until you change the mode in the settings. `timeoutMs` overrides the 90-second

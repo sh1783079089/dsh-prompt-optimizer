@@ -44,14 +44,23 @@ const modelConfigField = {
     return { type: this.type, meta: { ...this.meta } }
   },
 }
+const numberConfigField = {
+  type: 'number',
+  meta: { default: 0, volatile: true },
+  toJSON() {
+    return { type: this.type, meta: { ...this.meta } }
+  },
+}
 const modelConfigFields = {
   modelMode: modelConfigField,
   provider: modelConfigField,
   model: modelConfigField,
   contextDefault: modelConfigField,
   summaryMode: modelConfigField,
+  maxContextChars: numberConfigField,
+  timeoutMs: numberConfigField,
 }
-// Accepted values; a field without an entry takes any non-empty string.
+// Accepted string values; a field without an entry takes any non-empty string.
 const CONFIG_VALUES = {
   modelMode: ['', 'conversation', 'dedicated'],
   contextDefault: ['', 'on', 'off'],
@@ -81,10 +90,18 @@ export const Config = {
     validate(raw) {
       const value = { ...raw }
       for (const key of Object.keys(modelConfigFields)) {
-        let current = value[key] ?? ''
-        const allowed = CONFIG_VALUES[key]
-        if (typeof current !== 'string' || (allowed !== undefined && !allowed.includes(current))) {
-          return { issues: [{ message: `Invalid ${key}`, path: [key] }] }
+        let current = value[key]
+        if (modelConfigFields[key].type === 'number') {
+          if (current === undefined || current === null || current === '') current = 0
+          if (typeof current !== 'number' || !Number.isFinite(current) || current < 0) {
+            return { issues: [{ message: `Invalid ${key}`, path: [key] }] }
+          }
+        } else {
+          current = current ?? ''
+          const allowed = CONFIG_VALUES[key]
+          if (typeof current !== 'string' || (allowed !== undefined && !allowed.includes(current))) {
+            return { issues: [{ message: `Invalid ${key}`, path: [key] }] }
+          }
         }
         value[key] = Object.freeze({
           get: () => current,
@@ -198,7 +215,7 @@ async function handle(ctx, options, summaries, body) {
   const answers = normalizeAnswers(body?.answers)
   const forced = body?.force === true
   const language = resolveLanguage(body?.locale, body?.target)
-  const timeoutMs = positiveInteger(options.timeoutMs, DEFAULT_TIMEOUT_MS)
+  const timeoutMs = positiveInteger(configNumber(options.timeoutMs), DEFAULT_TIMEOUT_MS)
   const deadline = performance.now() + timeoutMs
   const questionMode = answers.length > 0 ? 'answers' : (forced ? 'force' : 'ask')
   // The request wins, then the plugin setting; an unknown value means the default.
@@ -257,6 +274,7 @@ async function readConversationContext(session, sessionId, budget, request) {
     truncated: local.truncated,
     available: true,
     summary: 'local',
+    budget,
   }
   if (request.summaryMode === 'local' || local.truncated === false) return fromLocal
 
@@ -269,6 +287,7 @@ async function readConversationContext(session, sessionId, budget, request) {
     truncated: summarized.summary.truncated,
     available: true,
     summary: summarized.reused ? 'cached' : 'ai',
+    budget,
   }
 }
 
@@ -384,17 +403,18 @@ function publicContext(context) {
     chars: context.chars,
     truncated: context.truncated,
     summary: context.summary ?? null,
+    budget: context.budget ?? null,
   }
 }
 
 /** A context result for "no session, no history, or the caller opted out". */
 function emptyContext() {
-  return { text: '', messages: 0, chars: 0, truncated: false, available: false, summary: null }
+  return { text: '', messages: 0, chars: 0, truncated: false, available: false, summary: null, budget: null }
 }
 
 /** Resolve the digest budget from configuration, clamped to a sane range. */
 function contextBudget(options) {
-  const requested = positiveInteger(options.maxContextChars, DEFAULT_CONTEXT_CHARS)
+  const requested = positiveInteger(configNumber(options.maxContextChars), DEFAULT_CONTEXT_CHARS)
   return Math.min(requested, MAX_CONTEXT_CHARS)
 }
 
@@ -480,6 +500,12 @@ function modelRoute(selection, includeEffort = true) {
 
 function configString(value) {
   return nonEmpty(typeof value?.get === 'function' ? value.get() : value)
+}
+
+/** The numeric value of a volatile config field, or `undefined`. */
+function configNumber(value) {
+  const raw = typeof value?.get === 'function' ? value.get() : value
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined
 }
 
 /** System instruction; the model answers with exactly one JSON object. */
