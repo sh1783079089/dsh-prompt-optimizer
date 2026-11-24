@@ -9,8 +9,9 @@ opens a dialog over the chat:
 2. **Optimize** sends the draft to the model.
 3. If the model decides that information is missing, the dialog lists up to four
    specific questions. Answer any of them and choose **Continue**; blank answers
-   are skipped. **Skip and optimize** produces a rewrite from whatever the draft
-   already says instead of asking again.
+   are skipped. **Continue** with an answer and **Skip and optimize** both expect
+   a rewrite. The dialog shows an error if the model asks for more details at
+   that stage.
 4. The dialog then shows the rewritten prompt with a short note on what changed.
    The result is editable. **Insert into composer** replaces the draft with it,
    and **Copy** places it on the clipboard. **Optimize again** reuses the answers
@@ -42,25 +43,32 @@ prompt comes back as a full prompt.
 default. The context icon beside the draft opens the settings for that one
 request: a checkbox for the context and a choice between AI summary and local
 compression. The plugin reads the active session through `Session.deriveMessages()`
-and uses only visible text from user and assistant turns. It excludes session
-system prompts, DSH compaction checkpoints, tool calls and results, reasoning,
-and attachments.
+and uses message sources and content types to select visible user and assistant
+text. This filters out host-injected messages, including DSH compaction
+checkpoints, as well as system prompts, tool calls and results, reasoning, and
+attachments.
+
+The draft and your answers can revise earlier decisions. The optimizer uses
+history to resolve references and carry forward constraints you established.
+It treats an assistant's unconfirmed suggestions as background.
 
 The history is prepared in one of two ways:
 
-- **Local compression** is deterministic: it keeps the newest turns, caps each
-  one, and marks the dropped stretch with an explicit elision marker. It makes
-  no model call.
+- **Local compression** keeps the newest turns within per-turn limits and
+  gives the latest user turn priority when reducing the history. It makes no
+  model call.
 - **AI summary** (default) sends the filtered history to the optimizer's model
   with a dedicated system prompt that preserves goals, constraints, decisions,
-  progress, and open work. It makes one model call.
+  progress, and open work. The optimization request includes the summary and
+  a quoted excerpt of the latest user turn when the budget has room. Preparing
+  a new summary makes one model call.
 
 `maxContextChars` bounds both the summary input and the context sent to the
 optimizer. It defaults to 6,000 characters and is capped at 24,000. The summary
-call requests up to 800 output tokens. A history that already fits the budget
-without truncation is sent as-is, so a short conversation never pays for a
-summary call. If the summary fails or exceeds its share of the request timeout,
-the request uses local compression.
+call requests up to 800 output tokens. If the full filtered history fits the
+budget, it goes straight to the optimizer. Per-turn limits apply when history
+needs compression. If the summary fails or exceeds its share of the request
+timeout, the request uses local compression.
 
 Successful summaries stay in host memory for up to 30 minutes, with a limit of
 32 entries. Matching requests reuse the summary while the filtered history,
